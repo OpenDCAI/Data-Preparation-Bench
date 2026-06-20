@@ -1,12 +1,44 @@
-# Data Preparation Bench
+<p align="center">
+  <a href="https://datapreparationbench.github.io/">
+    <img src="https://datapreparationbench.github.io/assets/main.png" style="height: 16em" alt="Data Preparation Bench" />
+  </a>
+</p>
 
-![main](https://datapreparationbench.github.io/assets/main.png)
+<h1 align="center">Data Preparation Bench</h1>
 
-## Overview
+<p align="center">
+  <a href="https://datapreparationbench.github.io/">
+    <img src="https://img.shields.io/badge/%F0%9F%8C%90%20Homepage%20-DataPrep--Bench-blue.svg" alt="Homepage" />
+  </a>
+  <a href="https://github.com/haolpku/Data-Preparation-Bench">
+    <img src="https://img.shields.io/badge/GitHub-Data--Preparation--Bench-181717?logo=github" alt="GitHub" />
+  </a>
+  <a href="https://huggingface.co/datasets/lhpku20010120/Data-Prep-Bench">
+    <img src="https://img.shields.io/badge/%F0%9F%93%9A%20HuggingFace%20-Data--Prep--Bench-orange.svg" alt="HuggingFace" />
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.12-1f425f.svg?color=purple" alt="Python" />
+  </a>
+  <a href="https://datapreparationbench.github.io/assets/DataPrep-Bench.pdf">
+    <img src="https://img.shields.io/badge/PDF-DataPrep--Bench-red?logo=adobeacrobatreader" alt="PDF" />
+  </a>
+</p>
 
-DataPrep-Bench is the first unified, downstream-grounded benchmark that jointly evaluates how well LLMs, agents, and data workflows can prepare training data end to end. It covers two complementary tracks: Data Construction, which transforms raw sources into SFT data, and Data Quality Evaluation, which predicts the downstream utility of candidate datasets. It also ships two strong baselines: Data-Construction-Skill for skill-driven agentic construction and the Distributional Alignment Score (DAS), a training-free, MMD-based quality estimator. Both tracks are tested under shared domains, base models, training protocols, and downstream benchmarks, so methods are compared by their actual downstream impact.
+<p align="center"><strong>A unified, downstream-grounded benchmark for data preparation in LLM training pipelines.</strong></p>
 
-## Data Construction
+---
+
+## 👋 Overview
+
+DataPrep-Bench is the first unified, downstream-grounded benchmark that jointly evaluates how well LLMs, agents, and data workflows can prepare training data end to end. It covers three complementary tracks:
+
+- **Data Construction** — transforms raw sources into SFT data.
+- **Data Selection** — selects high-utility subsets from candidate pools.
+- **Data Quality Evaluation** — predicts the downstream utility of candidate datasets.
+
+It also ships strong baselines for each track: Data-Construction-Skill for skill-driven agentic construction, a unified Data-Selection framework with ten selector strategies, and the Distributional Alignment Score (DAS), a training-free, MMD-based quality estimator. All tracks are tested under shared domains, base models, training protocols, and downstream benchmarks, so methods are compared by their actual downstream impact.
+
+## 🏗️ Data Construction
 
 ### Data Construction
 
@@ -43,7 +75,7 @@ The pipeline is resumable and tracks progress via `chunk_status.jsonl`, making i
 
 The underlying data-construction skill is also published as a standalone, reusable skill:
 
-- **Skill:** [data_construction_skill](./data_construction_skill/)
+- **Skill:** [data_construction_skill](https://clawhub.ai/technomad-ds/data-construction-skill)
 
 You can reference or import this skill directly in compatible agent frameworks.
 
@@ -61,7 +93,70 @@ Please refer to [Experiment.md](./Experiment.md) for detailed configures we empl
 
 The evaluation codes are in [Data-Agent-Evaluation](./Data-Agent-Evaluation/). You can use the [script](./Data-Agent-Evaluation/scripts/run_all_bench.sh) to run evaluation for the models trained in the last step. Please refer to [README.md](./Data-Agent-Evaluation/README.md) for instruction to use the script and [Experiment.md](./Experiment.md) for detailed configurations for evaluation.
 
-## Data Quality
+## 🎯 Data Selection
+
+The Data Selection framework ([data-selection](./data-selection)) selects high-utility subsets from large candidate SFT pools. It unifies random baselines, length and perplexity filters, embedding similarity, quality scoring, diversity algorithms, and LLM-as-a-judge methods behind a single `Selector` protocol, making it easy to compare selection strategies under identical training and evaluation conditions.
+
+<p align="center">
+  <img src="./assets/selection_overview.png" style="width: 90%; max-width: 900px;" alt="Data Selection average scores across domains and selection budgets" />
+</p>
+
+> Average downstream score of each selection method across all domains and selection budgets (k). Higher is better.
+
+### Selector Overview
+
+| Selector | Strategy |
+|----------|----------|
+| `RandomSelector` | Random baseline |
+| `SourceBalancedRandomSelector` | Source-balanced random sampling |
+| `LengthBasedSelector` | Shortest / longest samples |
+| `PerplexityBasedSelector` | Perplexity-based selection (`low` / `high` / `mid`) |
+| `EmbeddingSimilaritySelector` | NEAR-style similarity to a target set |
+| `DeitaQualitySelector` | Quality × complexity scoring |
+| `QualityScorerSelector` | FineWeb-Edu / PairQual quality scoring |
+| `DiversityKCenterSelector` | TSDS diversity K-Center |
+| `LLMAsSelector` | LLM multi-dimensional scoring |
+| `CompositeSelector` | Chain multiple selectors |
+
+### Installation
+
+```bash
+cd data-selection
+uv sync
+```
+
+### Quick Start
+
+```python
+from data_selection import RandomSelector
+from data_selection.runner import run_selection
+
+selector = RandomSelector(k=100, seed=42)
+run_selection(
+    selector,
+    input_path="data/input.jsonl",
+    output_path="data/output_random.jsonl",
+)
+```
+
+`run_selection` also supports multiple selection budgets in one call. For score-based selectors, scoring runs once at `max(k)` and results are truncated for smaller `k` values:
+
+```python
+run_selection(
+    selector,
+    input_path="data/input.jsonl",
+    output_path="data/output_k{k}.jsonl",
+    k=[1000, 10000, 100000],
+)
+```
+
+Please refer to [data-selection/README.md](./data-selection/README.md) for a complete guide to all selectors, input formats, score caching, and development commands.
+
+### Evaluation
+
+After selecting a subset, train a model on it with [LlamaFactory](https://github.com/hiyouga/LlamaFactory) and evaluate with the [Data-Agent-Evaluation](./Data-Agent-Evaluation/) harness. Please refer to [Experiment.md](./Experiment.md) for selection results across finance, law, medicine, math, general, and science domains.
+
+## 📊 Data Quality
 
 A Python package for computing distributional distances (e.g., MMD) between datasets, designed for evaluating data preparation quality in LLM training pipelines.
 
@@ -202,3 +297,11 @@ The example script [run_benchmark.py](./examples/run_benchmark.py) shows how to 
    The benchmark computes Pearson / Spearman correlation and a linear fit between your metric and the provided accuracies.
 
 Please refer to [Experiment.md](./Experiment.md) for detailed accuracy results.
+
+---
+
+## 💬 Community
+
+<p align="center" width="100%">
+  <img src="./assets/contact.png" alt="DataPrep-Bench Community" style="width: 80%; max-width: 960px; display: block; margin: auto;">
+</p>
