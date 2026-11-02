@@ -34,9 +34,9 @@ Our experiments were conducted with the following package versions:
 **Training Configuration:**
 ```yaml
 cutoff_len: 4096
-per_device_train_batch_size: 4
+per_device_train_batch_size: 1
 gradient_accumulation_steps: 4
-learning_rate: 1e-5
+learning_rate: 5.0e-6
 num_train_epochs: 3.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
