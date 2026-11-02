@@ -85,7 +85,7 @@ Training is conducted using [LlamaFactory](https://github.com/hiyouga/LlamaFacto
 - [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B)
 - [Llama-3.1-8B](https://huggingface.co/meta-llama/Llama-3.1-8B)
 
-For each constructed dataset, we will use it to train both base models followed by a [Dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) training.
+For each constructed domain dataset, we jointly fine-tune both base models on the generated domain records and [Dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k). The primary setting uses at most 20,000 domain records: outputs exceeding this ceiling are randomly subsampled to 20,000, while smaller outputs are retained in full. Dolly-15k is added separately and does not count toward the domain-record ceiling. The full-output setting jointly fine-tunes on all generated domain records and the same Dolly-15k corpus.
 
 Please refer to [Experiment.md](./Experiment.md) for detailed configures we employed in our experiments.
 
